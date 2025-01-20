@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using MkApi.Application.DTO;
 using MkApi.Application.Response;
 using MkApi.Domain.Entities;
 using MkApi.Domain.Repositories;
@@ -7,24 +8,24 @@ namespace MkApi.Application.UseCases;
 
 public class LoginUserCase
 {
-    readonly IUserRepository userRepository;
-    readonly IPasswordHasher<UserEntity> passwordHasher;
+    IUserRepository m_UserRepository { get; }
+    IPasswordHasher<UserEntity> m_PasswordHasher { get; }
 
     public LoginUserCase(IUserRepository userRepository)
     {
-        this.userRepository = userRepository;
-        passwordHasher = new PasswordHasher<UserEntity>();
+        m_UserRepository = userRepository;
+        m_PasswordHasher = new PasswordHasher<UserEntity>();
     }
 
-    public async Task<LoginResultResponse> Execute(string username, string password)
+    public async Task<GenericResponse> Execute(UserCredentialsDTO userCredentials)
     {
-        UserEntity? user = await userRepository.GetByUsername(username);
+        UserEntity? user = await m_UserRepository.GetByUsername(userCredentials.Username);
         if (user == null)
-            return new LoginResultResponse(false, "invalid_username_or_password");
+            return new GenericResponse(false, "invalid_username_or_password");
 
-        if (passwordHasher.VerifyHashedPassword(user, user.HashedPassword, password) != PasswordVerificationResult.Success)
-            return new LoginResultResponse(false, "invalid_username_or_password");
+        if (!user.CheckPassword(userCredentials.PlainTextPassword))
+            return new GenericResponse(false, "invalid_username_or_password");
 
-        return new LoginResultResponse(true, "login_successful");
+        return new GenericResponse(true, "login_successful");
     }
 }

@@ -1,5 +1,3 @@
-using Microsoft.AspNetCore.OpenApi;
-using Microsoft.EntityFrameworkCore;
 using MkApi.Application.UseCases;
 using MkApi.Database;
 using MkApi.Domain.Repositories;
@@ -18,18 +16,18 @@ public class Program
 
         // Add Services
         builder.Services.AddScoped<IUserRepository, UserRepository>();
+        
+        // Add Use Cases
         builder.Services.AddScoped<LoginUserCase>();
+        builder.Services.AddScoped<GetUsersUseCase>();
+        builder.Services.AddScoped<CreateUserUseCase>();
+        builder.Services.AddScoped<DeleteUserUseCase>();
+        builder.Services.AddScoped<PatchUserUseCase>();
 
         // Add Controllers
         builder.Services.AddControllers();
-        
-        string? connectionString = builder.Configuration.GetConnectionString("Default");
-        if (connectionString == null)
-            throw new InvalidOperationException("Connection string 'Default' not found");
 
-        builder.Services.AddDbContext<MkApiDatabase>(options => {
-            options.UseSqlServer(connectionString);
-        });
+        builder.Services.AddDbContext<MkApiDatabase>();
 
         var app = builder.Build();
 

@@ -2,3 +2,6 @@
 bin/
 obj/
 Migrations/
+Database.sqlite
+Database.sqlite-shm
+Database.sqlite-wal

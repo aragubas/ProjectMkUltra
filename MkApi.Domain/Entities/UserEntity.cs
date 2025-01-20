@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Identity;
+using MkApi.Domain.Exceptions;
 using MkApi.Domain.ValueObjects;
 
 namespace MkApi.Domain.Entities;
@@ -8,43 +9,72 @@ public class UserEntity
     public Guid Id { get; private set; }
     public string Username { get; private set; }
     public string HashedPassword { get; private set; }
-    public bool IsAdmin { get; private set; }
-    public List<CatFact> FavoriteCatFacts { get; private set; }
+    public List<string> FavoriteCatFacts { get; private set; }
+    IPasswordHasher<UserEntity> m_PasswordHasher { get; }
 
     public UserEntity(Guid id, string username, string hashedPassword, 
-        List<CatFact> favoriteCatFacts, bool isAdmin = false)
+        List<string> favoriteCatFacts)
     {
         if (string.IsNullOrWhiteSpace(username)) 
             throw new ArgumentException("Username cannot be empty");
         
         Id = id;
-        Username = username;
-        IsAdmin = isAdmin;
+        Username = "";
+        ChangeUsername(username);
         HashedPassword = hashedPassword;
         FavoriteCatFacts = favoriteCatFacts;
+
+        m_PasswordHasher = new PasswordHasher<UserEntity>();
     }
 
-    public void SetAdmin(bool isAdmin)
+    public void AddCatFact(string catFact)
     {
-        IsAdmin = isAdmin;
-    }
-
-    public void AddCatFact(CatFact catFact)
-    {
+        if (string.IsNullOrWhiteSpace(catFact))
+            throw new ArgumentException("Cat Fact cannot be empty");
         FavoriteCatFacts.Add(catFact);
     }
 
     public void ChangeUsername(string newUsername)
     {
-        if (string.IsNullOrWhiteSpace(newUsername))
-            throw new ArgumentException("Username cannot be empty");
+        if (!ValidateUsername(newUsername))
+            throw new ArgumentException("Username is invalid");
         Username = newUsername;
     }
 
-    public bool ValidatePassword(string password, IPasswordHasher<UserEntity> hasher)
+    /// <summary>
+    /// Change user password
+    /// </summary>
+    /// <param name="oldPlainTextPassword">Old "current" password</param>
+    /// <param name="newPlainTextPassword">New password</param>
+    /// <exception cref="ArgumentException"></exception>
+    /// <exception cref="UserAuthenticationException"></exception>
+    public void ChangePassword(string oldPlainTextPassword, string newPlainTextPassword)
     {
-        return hasher.VerifyHashedPassword(this, HashedPassword, password) == PasswordVerificationResult.Success;
+        if (!ValidatePassword(oldPlainTextPassword) || !ValidatePassword(newPlainTextPassword))
+            throw new ArgumentException("New password or old password format is invalid.");
+
+        if (!CheckPassword(oldPlainTextPassword))
+            throw new UserAuthenticationException("Old password is invalid");
+
+        SetPassword(newPlainTextPassword);
     }
+
+    public bool CheckPassword(string password)
+        => m_PasswordHasher.VerifyHashedPassword(this, HashedPassword, password) == PasswordVerificationResult.Success;
+
+    public void SetPassword(string plainTextPassword)
+    {
+        if (!ValidatePassword(plainTextPassword))
+            throw new ArgumentException("Password is invalid");
+
+        HashedPassword = m_PasswordHasher.HashPassword(this, plainTextPassword);
+    }
+
+    public bool ValidateUsername(string username)
+        => !string.IsNullOrWhiteSpace(username);
+
+    public bool ValidatePassword(string plainTextPassword)
+        => !string.IsNullOrWhiteSpace(plainTextPassword);
 
     public override bool Equals(object? obj)
     {

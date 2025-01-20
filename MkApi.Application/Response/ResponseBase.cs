@@ -1,12 +1,11 @@
 namespace MkApi.Application.Response;
 
-public class LoginResultResponse
+public abstract class ResponseBase
 {
     public bool Success { get; }
-    public string Message { get; }
+    public string? Message { get; }
 
-
-    public LoginResultResponse(bool success, string message)
+    public ResponseBase(bool success, string? message = null)
     {
         Success = success;
         Message = message;
